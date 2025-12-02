@@ -1,0 +1,10 @@
+*.docx
+*.drawio
+设计模式.md
+saves/*
+__pycache__/
+*/__pycache__/
+*.typ
+*.pdf
+img/
+project_step1.md
