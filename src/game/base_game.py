@@ -52,7 +52,9 @@ class Game:
         if not move.is_pass and not self.board.is_empty(move.x, move.y):
             return ApplyResult(ended=False, message="Position already occupied")
         if not self.rule_engine.is_legal(self.board, move, self.history):
-            return ApplyResult(ended=False, message="Illegal move by rule")
+            # 允许规则引擎提供更具体的错误信息（例如自杀禁手）
+            message = getattr(self.rule_engine, "last_error_message", "Illegal move by rule")
+            return ApplyResult(ended=False, message=message)
 
         # 保存当前局面以支持悔棋
         self.history.push(self.board, self.to_move)

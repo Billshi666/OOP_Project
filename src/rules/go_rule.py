@@ -17,12 +17,40 @@ class GoRuleEngine(RuleEngine):
 
     def is_legal(self, board: Board, move: Move, history: History) -> bool:
         if move.is_pass:
+            # pass 一定合法
+            self.last_error_message = ""
             return True
         if not board.in_bounds(move.x, move.y):
+            self.last_error_message = ""
             return False
         if not board.is_empty(move.x, move.y):
+            self.last_error_message = ""
             return False
-        # 不考虑自杀禁手，故不检测落子后气
+
+        # 自杀禁手：如果本方落子后没有气，且没有提到对方棋子，则判为非法
+        # 使用临时棋盘模拟落子和提子，不影响真实局面
+        temp = board.clone()
+        temp.set(move.x, move.y, move.color)
+
+        captured = 0
+        for nx, ny in temp.neighbors(move.x, move.y):
+            neighbor_color = temp.get(nx, ny)
+            if neighbor_color is None or neighbor_color == move.color:
+                continue
+            chain, liberties = self._collect_chain(temp, nx, ny)
+            if liberties == 0:
+                for cx, cy in chain:
+                    temp.set(cx, cy, None)
+                captured += len(chain)
+
+        # 重新计算己方落子后的气
+        _, liberties_after = self._collect_chain(temp, move.x, move.y)
+        if liberties_after == 0 and captured == 0:
+            # 没有提子且自己无气，属于自杀
+            self.last_error_message = "Suicide move is not allowed in Go"
+            return False
+
+        self.last_error_message = ""
         return True
 
     def apply_move(self, board: Board, move: Move, history: History) -> ApplyResult:
