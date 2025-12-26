@@ -114,8 +114,10 @@ class Game:
     def restart(self, config: Optional[GameConfig] = None) -> None:
         self.start(config)
 
-    def save(self, path: str) -> None:
+    def save(self, path: str, meta: Optional[dict] = None) -> None:
         snapshot = self._build_snapshot(include_history=True)
+        if meta:
+            snapshot["meta"] = meta
         self.serializer.save(snapshot, path)
 
     def load(self, path: str) -> None:

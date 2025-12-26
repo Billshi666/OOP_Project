@@ -1,6 +1,6 @@
-# 测试用例（命令与实际输出）
+# 测试用例（第一阶段：Go / Gomoku）
 
-说明：以下均在项目根目录运行 `python3 -m src.main`，将命令序列通过管道喂入；终端输出摘录核心内容（系统提示行略）。
+说明：以下均在项目根目录运行 `python3 -m src.main`，将命令序列通过管道喂入；终端输出摘录核心内容（棋盘、启动首屏、Hints/Tip 文本等均略）。
 
 ## 通用/非法输入
 输入：
@@ -13,8 +13,10 @@ quit
 ```
 实际输出摘录：
 ```
-Start a game first: start go|gomoku [size]
-Start a game first: start go|gomoku [size]
+Start a game first: start go|gomoku|othello [size]
+Tip: type 'help' for examples (e.g. start othello 8)
+Start a game first: start go|gomoku|othello [size]
+Tip: type 'help' for examples (e.g. start othello 8)
 Start failed: Board size must be between 8 and 19
 Start failed: Board size must be between 8 and 19
 ```
@@ -36,12 +38,9 @@ quit
 ```
 实际输出摘录：
 ```
-Board Game Platform (Go / Gomoku)...
 [info] Started gomoku size 8
-[turn] Black to move
 ...
 [info] Move (0,4)
-[turn] Black to move
 ...
 [info] BLACK wins by five in a row
 [result] BLACK wins by five in a row
@@ -186,7 +185,7 @@ quit
 ```
 ...
 [info] Draw: board is full
-[result] Game ended
+[result] Draw: board is full
 ```
 
 ## Go：提子、双 pass 终局（数子胜局）

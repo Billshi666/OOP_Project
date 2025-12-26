@@ -1,6 +1,6 @@
-# 棋类对战平台（Go / Gomoku）
+# 棋类对战平台（Go / Gomoku / Othello）
 
-一个基于命令行的棋类对战平台，支持 **围棋** 和 **五子棋** 的双人对战，作为面向对象程序设计课程的大作业第一阶段实现。
+一个基于命令行的棋类对战平台，支持 **围棋（Go）**、**五子棋（Gomoku）** 和 **黑白棋（Othello）**，用于面向对象程序设计课程大作业（含第二阶段扩展）。
 
 > 本 README 用于开发者或日后维护者快速了解项目情况。  
 > 面向玩家的使用说明见：`PLAYER_GUIDE.md`。  
@@ -8,10 +8,13 @@
 
 ## 功能概览
 
-- 支持两种棋类：
+- 支持三种棋类：
   - 五子棋（Gomoku）：任意方向连五即胜，满盘平局。
   - 围棋（Go）：支持提子、虚着（pass）、双 pass 后数子判胜负。
+  - 黑白棋（Othello）：合法落子翻转、无合法棋步 forced pass、终局按子数判胜负（尺寸为偶数 8–18）。
 - 双人对战（黑白轮流），黑棋先行。
+- 对弈双方可配置为玩家或 AI（第二阶段实现，AI 目前仅支持 Othello，含 ai1/ai2）。
+- 账号系统（第二阶段实现）：本地注册/登录，记录战绩（胜场/对战场次），存档文件与账号关联。
 - 基本对局控制：
   - 开始游戏：选择游戏类型和棋盘尺寸（8–19）。
   - 对局中重开（可调整尺寸）。
@@ -19,6 +22,7 @@
 - 局面管理：
   - 棋盘实时显示，黑白棋清晰区分。
   - 存档与读档：支持多局命名存档，默认恢复上一局。
+  - 回放：可对存档进行逐步回放（next/prev/jump/exit），显示每一步坐标与翻转/提子信息。
   - 处理非法操作并给出错误提示（越界、占用、无棋可悔、非法尺寸、非法命令等）。
 - 文档与测试：
   - 需求说明、架构设计、UML（Mermaid）。
@@ -37,7 +41,7 @@
 python3 -m src.main
 ```
 
-在命令行内使用 `start go|gomoku [size]` 开始对局，更多玩家操作说明见 `PLAYER_GUIDE.md`。
+在命令行内使用 `help` 查看命令，并用 `start go|gomoku|othello [size]` 开始对局，更多玩家操作说明见 `PLAYER_GUIDE.md`。
 
 ## 目录结构
 
@@ -49,6 +53,10 @@ python3 -m src.main
 │  ├─ command_parser.py     # 简单命令行解析
 │  ├─ renderer.py           # CLI 渲染器（棋盘与消息显示）
 │  ├─ serializer.py         # JSON 存档读写
+│  ├─ seat.py               # 对弈双方配置（human/ai + username）
+│  ├─ accounts.py           # 本地账号系统（PBKDF2+salt+hash）
+│  ├─ ai_othello.py         # Othello AI（ai1 随机、ai2 评分策略）
+│  ├─ replay.py             # 存档回放模式
 │  ├─ core/                 # 领域核心模型
 │  │  ├─ board.py           # 棋盘表示与基本操作
 │  │  ├─ move.py            # 落子/操作表示
@@ -59,15 +67,18 @@ python3 -m src.main
 │  │  ├─ base_game.py       # Game 模板基类（生命周期与通用流程）
 │  │  ├─ go_game.py         # 围棋具体游戏
 │  │  ├─ gomoku_game.py     # 五子棋具体游戏
+│  │  ├─ othello_game.py    # 黑白棋具体游戏
 │  │  └─ factory.py         # 抽象工厂：按类型创建游戏
 │  └─ rules/                # 规则引擎（策略）
 │     ├─ base_rule.py       # RuleEngine 抽象、ApplyResult、GameResult
 │     ├─ go_rule.py         # 围棋规则（提子、数子）
-│     └─ gomoku_rule.py     # 五子棋规则（连五、满盘平局）
+│     ├─ gomoku_rule.py     # 五子棋规则（连五、满盘平局）
+│     └─ othello_rule.py    # 黑白棋规则（合法落子/翻转/forced pass）
 ├─ docs/
 │  ├─ requirements.md       # 需求说明
 │  ├─ architecture.md       # 领域建模与架构分层 + UML
-│  └─ tests.md              # 测试用例与实际输出记录
+│  ├─ test1.md              # 第一阶段测试用例与实际输出记录
+│  └─ test2.md              # 第二阶段测试用例与实际输出记录（Othello/AI/账号/回放）
 ├─ PLAYER_GUIDE.md          # 玩家使用说明
 ├─ project_step1.md         # 课程作业原始说明（第一阶段）
 └─ README.md                # 本文件
@@ -80,10 +91,10 @@ python3 -m src.main
 代码整体遵循“后端逻辑与客户端界面分离”的思路，主要采用了以下设计模式（细节见 `docs/architecture.md`）：
 
 - 抽象工厂（`GameFactory`）  
-  根据玩家选择的游戏类型（Go / Gomoku）创建对应的 `Game` 实例及其配置，便于后续扩展更多棋类。
+根据玩家选择的游戏类型（Go / Gomoku / Othello）创建对应的 `Game` 实例及其配置，便于后续扩展更多棋类。
 
 - 策略模式（`RuleEngine` 及其实现）  
-  将围棋/五子棋的规则判定封装为独立的策略类：`GoRuleEngine`、`GomokuRuleEngine`，`Game` 通过统一接口调用规则逻辑。
+将围棋/五子棋/黑白棋的规则判定封装为独立的策略类：`GoRuleEngine`、`GomokuRuleEngine`、`OthelloRuleEngine`，`Game` 通过统一接口调用规则逻辑。
 
 - 模板方法（`Game` 基类）  
   在基类中定义对局流程骨架（落子检查、历史快照、终局判定等），具体规则委托给策略类实现。
@@ -117,13 +128,19 @@ python3 -m src.main
 
 ## GUI 说明（可选扩展）
 
-除命令行版本外，项目还实现了一个基于 Tkinter 的简单图形界面：
+除命令行版本外，项目还实现了一个基于 Tkinter 的简单图形界面（与命令行复用同一套 `Controller` / 规则引擎）：
 
 - 启动方式：
   - 在项目根目录运行：`python3 -m src.gui_main`
 - 界面组成：
-  - 左侧为棋盘网格（支持 8–19 的棋盘尺寸），鼠标点击棋盘格即可落子。
-  - 右侧为控制区：游戏类型选择（Go / Gomoku）、棋盘尺寸输入，以及 Start / Restart / Undo / Pass(Go) / Resign / Save / Load 按钮。
+  - 左侧为棋盘网格，鼠标点击棋盘格即可落子。
+  - 右侧为控制区：
+    - 游戏类型：Go / Gomoku / Othello
+    - 棋盘尺寸：Go/Gomoku 支持 8–19；Othello 支持偶数 8–18
+    - 对局操作：Start / Restart / Undo / Pass(Go) / Resign
+    - 存档与回放：Save / Load / Replay + Prev/Next/Jump/Exit Replay
+    - Othello 辅助：Moves（用 `*` 标出当前合法落子点）
+    - Seats / Accounts：Human/AI1/AI2（AI 仅 Othello），以及 Register/Login/Logout + Who
   - 下方为信息栏：显示当前提示信息、对局结果和轮到哪一方行棋。
 - 行为与命令行一致：
   - 所有按钮操作最终都会被映射为与命令行相同的命令（如 play/pass/undo/save/load 等），复用同一套 `Controller` 和规则引擎逻辑。

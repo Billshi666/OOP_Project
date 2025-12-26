@@ -3,6 +3,7 @@ from typing import Optional
 from src.game.base_game import Game, GameConfig
 from src.game.go_game import GoGame
 from src.game.gomoku_game import GomokuGame
+from src.game.othello_game import OthelloGame
 
 
 class GameFactory:
@@ -17,12 +18,18 @@ class GameFactory:
             game = GoGame()
         elif game_type == "gomoku":
             game = GomokuGame()
+        elif game_type == "othello":
+            game = OthelloGame()
         else:
             raise ValueError("Unknown game type")
-        # 初始化棋盘
+        # 初始化棋盘（不同游戏有不同尺寸约束）
         if size is not None:
-            if size < 8 or size > 19:
-                raise ValueError("Board size must be between 8 and 19")
+            if game_type == "othello":
+                if size < 8 or size > 18 or size % 2 != 0:
+                    raise ValueError("Othello size must be even between 8 and 18")
+            else:
+                if size < 8 or size > 19:
+                    raise ValueError("Board size must be between 8 and 19")
         from src.game.base_game import GameConfig
 
         game.start(GameConfig(size=size if size else game.default_size))
