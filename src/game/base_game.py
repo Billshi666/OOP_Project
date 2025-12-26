@@ -149,8 +149,12 @@ class Game:
         self.to_move = PlayerColor(data["to_move"])
         self.ended = data.get("ended", False)
         winner_value = data.get("last_result")
+        last_msg = data.get("last_result_msg", "")
         if winner_value:
-            self.last_result = GameResult(winner=PlayerColor(winner_value), message=data.get("last_result_msg", ""))
+            self.last_result = GameResult(winner=PlayerColor(winner_value), message=last_msg)
+        elif self.ended and last_msg:
+            # Draw or ended-with-message cases store winner as None in snapshot
+            self.last_result = GameResult(winner=None, message=last_msg)
         else:
             self.last_result = None
         self.history = History.from_serializable(data.get("history", []), size)
